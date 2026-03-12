@@ -33,6 +33,14 @@ export const EVENT_TYPES: EventTypeConfig[] = [
     bgDark: "dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800",
     icon: "🎭",
   },
+  {
+    id: "poste_secours",
+    label: "Poste de secours",
+    color: "#EF4444",
+    bgLight: "bg-red-100 text-red-800 border-red-200",
+    bgDark: "dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
+    icon: "🚑",
+  },
 ];
 
 export function getEventTypeConfig(typeId: string): EventTypeConfig {

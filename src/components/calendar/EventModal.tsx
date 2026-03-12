@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { Trash2, MapPin, AlignLeft, Users, Save, Plus } from "lucide-react";
+import {
+  Trash2,
+  MapPin,
+  AlignLeft,
+  Users,
+  Save,
+  Plus,
+  Check,
+  UserCheck,
+  Pencil,
+} from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import CommentSection from "@/components/calendar/CommentSection";
 import { CalendarEvent, EventType } from "@/types";
@@ -17,6 +27,7 @@ interface EventModalProps {
   defaultDate?: Date;
   onSave: (data: Partial<CalendarEvent>) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
+  onRsvpUpdate?: (eventId: string, rsvp: string[]) => void;
 }
 
 export default function EventModal({
@@ -26,9 +37,11 @@ export default function EventModal({
   defaultDate,
   onSave,
   onDelete,
+  onRsvpUpdate,
 }: EventModalProps) {
   const { currentMember } = useMember();
-  const isEditing = !!event;
+  const isExisting = !!event;
+  const [isEditing, setIsEditing] = useState(false);
 
   const [title, setTitle] = useState("");
   const [type, setType] = useState<EventType>("sortie");
@@ -42,6 +55,7 @@ export default function EventModal({
   const [participants, setParticipants] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
 
   useEffect(() => {
     if (event) {
@@ -51,6 +65,7 @@ export default function EventModal({
       setLocation(event.location || "");
       setDescription(event.description || "");
       setParticipants(event.participants || []);
+      setIsEditing(false);
 
       const start = new Date(event.startDate);
       setStartDate(format(start, "yyyy-MM-dd"));
@@ -74,8 +89,29 @@ export default function EventModal({
       setEndDate(format(d, "yyyy-MM-dd"));
       setEndTime("11:00");
       setConfirmDelete(false);
+      setIsEditing(true);
     }
   }, [event, defaultDate, isOpen, currentMember]);
+
+  const handleRsvp = useCallback(async () => {
+    if (!event || !currentMember || rsvpLoading) return;
+    setRsvpLoading(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/rsvp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ member: currentMember }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onRsvpUpdate?.(event.id, data.rsvp);
+      }
+    } catch (err) {
+      console.error("Erreur RSVP:", err);
+    } finally {
+      setRsvpLoading(false);
+    }
+  }, [event, currentMember, rsvpLoading, onRsvpUpdate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,7 +125,9 @@ export default function EventModal({
 
     const endISO = allDay
       ? new Date(`${endDate || startDate}T23:59:59`).toISOString()
-      : new Date(`${endDate || startDate}T${endTime || startTime}:00`).toISOString();
+      : new Date(
+          `${endDate || startDate}T${endTime || startTime}:00`
+        ).toISOString();
 
     await onSave({
       title: title.trim(),
@@ -100,7 +138,7 @@ export default function EventModal({
       location: location.trim(),
       description: description.trim(),
       participants,
-      createdBy: currentMember || "Anonyme",
+      createdBy: event?.createdBy || currentMember || "Anonyme",
     });
 
     setSaving(false);
@@ -119,15 +157,199 @@ export default function EventModal({
 
   function toggleParticipant(label: string) {
     setParticipants((prev) =>
-      prev.includes(label) ? prev.filter((p) => p !== label) : [...prev, label]
+      prev.includes(label)
+        ? prev.filter((p) => p !== label)
+        : [...prev, label]
     );
   }
 
+  const rsvpList = event?.rsvp || [];
+  const iAmComing = currentMember ? rsvpList.includes(currentMember) : false;
+  const typeConfig = event ? getEventTypeConfig(event.type) : null;
+
+  // ====== MODE CONSULTATION (événement existant, pas en édition) ======
+  if (isExisting && !isEditing) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title={event!.title} size="lg">
+        <div className="space-y-4">
+          {/* Badge type */}
+          <div className="flex items-center gap-2">
+            <span
+              className="event-badge"
+              style={{
+                backgroundColor: `${typeConfig!.color}20`,
+                color: typeConfig!.color,
+                borderColor: `${typeConfig!.color}40`,
+              }}
+            >
+              <span>{typeConfig!.icon}</span>
+              {typeConfig!.label}
+            </span>
+          </div>
+
+          {/* Dates */}
+          <div className="text-sm text-surface-600 dark:text-surface-300">
+            {event!.allDay ? (
+              <p>
+                📅 Toute la journée —{" "}
+                {format(new Date(event!.startDate), "dd/MM/yyyy")}
+                {event!.endDate &&
+                  format(new Date(event!.endDate), "dd/MM/yyyy") !==
+                    format(new Date(event!.startDate), "dd/MM/yyyy") &&
+                  ` au ${format(new Date(event!.endDate), "dd/MM/yyyy")}`}
+              </p>
+            ) : (
+              <p>
+                🕐{" "}
+                {format(new Date(event!.startDate), "dd/MM/yyyy à HH:mm")}
+                {event!.endDate &&
+                  ` → ${format(new Date(event!.endDate), "HH:mm")}`}
+              </p>
+            )}
+          </div>
+
+          {/* Lieu */}
+          {event!.location && (
+            <div className="flex items-center gap-2 text-sm text-surface-500 dark:text-surface-400">
+              <MapPin size={14} />
+              {event!.location}
+            </div>
+          )}
+
+          {/* Description */}
+          {event!.description && (
+            <div className="text-sm text-surface-600 dark:text-surface-300 bg-surface-50 dark:bg-surface-800/50 p-3 rounded-xl">
+              {event!.description}
+            </div>
+          )}
+
+          {/* Participants invités */}
+          {event!.participants.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wide mb-1.5">
+                <Users size={12} className="inline mr-1" />
+                Invités
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {event!.participants.map((p) => (
+                  <span
+                    key={p}
+                    className="px-2.5 py-1 text-xs rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-700"
+                  >
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* === SECTION RSVP === */}
+          <div className="p-4 rounded-xl bg-surface-50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-surface-700 dark:text-surface-200">
+                <UserCheck size={14} className="inline mr-1.5" />
+                Présences confirmées ({rsvpList.length})
+              </p>
+
+              {currentMember && (
+                <button
+                  onClick={handleRsvp}
+                  disabled={rsvpLoading}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
+                    iAmComing
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm"
+                      : "bg-white dark:bg-surface-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-surface-700 dark:text-surface-200 border border-surface-300 dark:border-surface-600 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-400"
+                  }`}
+                >
+                  {rsvpLoading ? (
+                    <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                  ) : iAmComing ? (
+                    <>
+                      <Check size={16} />
+                      Je viens !
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck size={16} />
+                      Je viens !
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {rsvpList.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {rsvpList.map((m) => (
+                  <span
+                    key={m}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                  >
+                    <Check size={12} />
+                    {m}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-surface-400 italic">
+                Personne n&apos;a encore confirmé sa présence.
+              </p>
+            )}
+
+            {!currentMember && (
+              <p className="text-xs text-surface-400 italic mt-2">
+                Sélectionne ton prénom dans le menu pour confirmer ta présence.
+              </p>
+            )}
+          </div>
+
+          {/* Créé par */}
+          <p className="text-xs text-surface-400 dark:text-surface-500">
+            Créé par {event!.createdBy} le{" "}
+            {format(new Date(event!.createdAt), "dd/MM/yyyy à HH:mm")}
+          </p>
+
+          {/* Boutons action */}
+          <div className="flex items-center justify-between pt-2 border-t border-surface-200 dark:border-surface-800">
+            {onDelete ? (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className={`text-sm font-medium flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
+                  confirmDelete
+                    ? "btn-danger"
+                    : "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                }`}
+              >
+                <Trash2 size={16} />
+                {confirmDelete ? "Confirmer" : "Supprimer"}
+              </button>
+            ) : (
+              <div />
+            )}
+
+            <button
+              onClick={() => setIsEditing(true)}
+              className="btn-secondary text-sm"
+            >
+              <Pencil size={16} />
+              Modifier
+            </button>
+          </div>
+
+          {/* Commentaires */}
+          <CommentSection eventId={event!.id} />
+        </div>
+      </Modal>
+    );
+  }
+
+  // ====== MODE ÉDITION / CRÉATION ======
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? "Détail de l'événement" : "Nouvel événement"}
+      title={isExisting ? "Modifier l'événement" : "Nouvel événement"}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -292,7 +514,7 @@ export default function EventModal({
 
         {/* Actions */}
         <div className="flex items-center justify-between pt-2 border-t border-surface-200 dark:border-surface-800">
-          {isEditing && onDelete ? (
+          {isExisting && onDelete ? (
             <button
               type="button"
               onClick={handleDelete}
@@ -310,13 +532,27 @@ export default function EventModal({
           )}
 
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="btn-secondary text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                if (isExisting) {
+                  setIsEditing(false);
+                } else {
+                  onClose();
+                }
+              }}
+              className="btn-secondary text-sm"
+            >
               Annuler
             </button>
-            <button type="submit" disabled={saving} className="btn-primary text-sm">
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn-primary text-sm"
+            >
               {saving ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : isEditing ? (
+              ) : isExisting ? (
                 <>
                   <Save size={16} />
                   Enregistrer
@@ -331,9 +567,6 @@ export default function EventModal({
           </div>
         </div>
       </form>
-
-      {/* Commentaires (uniquement en mode édition) */}
-      {isEditing && event && <CommentSection eventId={event.id} />}
     </Modal>
   );
 }

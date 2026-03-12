@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       location: body.location || "",
       description: body.description || "",
       participants: body.participants || [],
+      rsvp: body.rsvp || [],
       createdBy: body.createdBy,
       createdAt: now,
       updatedAt: now,

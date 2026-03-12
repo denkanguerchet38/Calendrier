@@ -63,6 +63,11 @@ export default function EventCard({
               {event.participants.join(", ")}
             </p>
           )}
+          {event.rsvp && event.rsvp.length > 0 && (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+              ✓ {event.rsvp.length} confirmé{event.rsvp.length > 1 ? "s" : ""}
+            </p>
+          )}
         </div>
       </div>
     </button>

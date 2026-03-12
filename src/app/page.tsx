@@ -30,7 +30,7 @@ export default function HomePage() {
   const [slotDate, setSlotDate] = useState<Date | undefined>();
   const [showMemberPicker, setShowMemberPicker] = useState(false);
 
-  const { events, loading, fetchEvents, createEvent, updateEvent, deleteEvent } =
+  const { events, loading, fetchEvents, createEvent, updateEvent, deleteEvent, patchEvent } =
     useEvents();
   const { currentMember, isLoaded } = useMember();
 
@@ -102,6 +102,11 @@ export default function HomePage() {
     await deleteEvent(id);
   }
 
+  function handleRsvpUpdate(eventId: string, rsvp: string[]) {
+    setSelectedEvent((prev) => (prev && prev.id === eventId ? { ...prev, rsvp } : prev));
+    patchEvent(eventId, { rsvp });
+  }
+
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-surface-950">
       <Navbar
@@ -151,6 +156,7 @@ export default function HomePage() {
         defaultDate={slotDate}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
+        onRsvpUpdate={handleRsvpUpdate}
       />
 
       {/* Modal sélection membre (premier accès) */}

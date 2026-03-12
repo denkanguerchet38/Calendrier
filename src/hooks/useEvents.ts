@@ -105,6 +105,15 @@ export function useEvents() {
     }
   }, []);
 
+  const patchEvent = useCallback(
+    (id: string, patch: Partial<CalendarEvent>) => {
+      setEvents((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, ...patch } : e))
+      );
+    },
+    []
+  );
+
   return {
     events,
     loading,
@@ -113,5 +122,6 @@ export function useEvents() {
     createEvent,
     updateEvent,
     deleteEvent,
+    patchEvent,
   };
 }

@@ -37,6 +37,7 @@ export async function PUT(
       ...(body.location !== undefined && { location: body.location }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.participants !== undefined && { participants: body.participants }),
+      ...(body.rsvp !== undefined && { rsvp: body.rsvp }),
       updatedAt: new Date().toISOString(),
     };
 

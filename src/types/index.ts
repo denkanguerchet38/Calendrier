@@ -1,4 +1,4 @@
-export type EventType = "sport" | "anniversaire" | "vacances" | "sortie";
+export type EventType = "sport" | "anniversaire" | "vacances" | "sortie" | "poste_secours";
 
 export interface CalendarEvent {
   id: string;
@@ -10,6 +10,7 @@ export interface CalendarEvent {
   location?: string;
   description?: string;
   participants: string[];
+  rsvp: string[]; // Membres qui ont confirmé leur présence
   createdBy: string;
   createdAt: string;
   updatedAt: string;
