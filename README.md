@@ -52,7 +52,6 @@ Remplir `.env.local` :
 
 ```env
 SITE_PASSWORD=GvJ-NotreFam!2026#
-ADMIN_EMAIL=ton-email@gmail.com
 SESSION_SECRET=une-chaine-aleatoire-de-64-caracteres-minimum-pour-signer-les-cookies
 
 FIREBASE_ADMIN_PROJECT_ID=notre-famille-xxxxx
@@ -94,7 +93,6 @@ git push -u origin main
 2. Importer le repo GitHub `notre-famille`
 3. **Variables d'environnement** → Ajouter :
    - `SITE_PASSWORD` → `GvJ-NotreFam!2026#`
-   - `ADMIN_EMAIL` → `ton-email@gmail.com`
    - `SESSION_SECRET` → (générer avec `openssl rand -hex 32`)
    - `FIREBASE_ADMIN_PROJECT_ID` → (depuis Firebase)
    - `FIREBASE_ADMIN_CLIENT_EMAIL` → (depuis Firebase)
