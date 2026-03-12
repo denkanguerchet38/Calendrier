@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFirebaseAdmin } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-// GET /api/events — Récupérer les événements
+async function getDb() {
+  const { getFirebaseAdmin } = await import("@/lib/firebase-admin");
+  return getFirebaseAdmin().db;
+}
+
+// GET /api/events
 export async function GET(request: NextRequest) {
   try {
-    const { db } = getFirebaseAdmin();
+    const db = await getDb();
     const { searchParams } = new URL(request.url);
 
     const startDate = searchParams.get("start");
@@ -38,10 +43,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/events — Créer un événement
+// POST /api/events
 export async function POST(request: NextRequest) {
   try {
-    const { db } = getFirebaseAdmin();
+    const db = await getDb();
     const body = await request.json();
 
     const now = new Date().toISOString();

@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFirebaseAdmin } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-// PUT /api/events/[id] — Modifier un événement
+async function getDb() {
+  const { getFirebaseAdmin } = await import("@/lib/firebase-admin");
+  return getFirebaseAdmin().db;
+}
+
+// PUT /api/events/[id]
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { db } = getFirebaseAdmin();
+    const db = await getDb();
     const { id } = await params;
     const body = await request.json();
 
@@ -31,9 +36,7 @@ export async function PUT(
       ...(body.allDay !== undefined && { allDay: body.allDay }),
       ...(body.location !== undefined && { location: body.location }),
       ...(body.description !== undefined && { description: body.description }),
-      ...(body.participants !== undefined && {
-        participants: body.participants,
-      }),
+      ...(body.participants !== undefined && { participants: body.participants }),
       updatedAt: new Date().toISOString(),
     };
 
@@ -49,13 +52,13 @@ export async function PUT(
   }
 }
 
-// DELETE /api/events/[id] — Supprimer un événement
+// DELETE /api/events/[id]
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { db } = getFirebaseAdmin();
+    const db = await getDb();
     const { id } = await params;
 
     const eventRef = db.collection("events").doc(id);
@@ -68,7 +71,6 @@ export async function DELETE(
       );
     }
 
-    // Supprimer aussi les commentaires associés
     const commentsSnapshot = await eventRef.collection("comments").get();
     const batch = db.batch();
     commentsSnapshot.docs.forEach((commentDoc) => {

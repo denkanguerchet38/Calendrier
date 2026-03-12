@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
 
-    // Vérification côté serveur
     if (username !== "Famille" || password !== process.env.SITE_PASSWORD) {
       return NextResponse.json(
         { error: "Identifiant ou mot de passe incorrect." },
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Créer la session
+    const { createSession } = await import("@/lib/session");
     await createSession();
 
     return NextResponse.json({ success: true });

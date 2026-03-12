@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFirebaseAdmin } from "@/lib/firebase-admin";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-// GET /api/comments?eventId=xxx — Récupérer les commentaires d'un événement
+async function getDb() {
+  const { getFirebaseAdmin } = await import("@/lib/firebase-admin");
+  return getFirebaseAdmin().db;
+}
+
+// GET /api/comments?eventId=xxx
 export async function GET(request: NextRequest) {
   try {
-    const { db } = getFirebaseAdmin();
+    const db = await getDb();
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("eventId");
 
     if (!eventId) {
-      return NextResponse.json(
-        { error: "eventId requis." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "eventId requis." }, { status: 400 });
     }
 
     const snapshot = await db
@@ -40,10 +42,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/comments — Ajouter un commentaire
+// POST /api/comments
 export async function POST(request: NextRequest) {
   try {
-    const { db } = getFirebaseAdmin();
+    const db = await getDb();
     const body = await request.json();
 
     if (!body.eventId || !body.author || !body.text) {
@@ -78,10 +80,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/comments?eventId=xxx&commentId=yyy — Supprimer un commentaire
+// DELETE /api/comments?eventId=xxx&commentId=yyy
 export async function DELETE(request: NextRequest) {
   try {
-    const { db } = getFirebaseAdmin();
+    const db = await getDb();
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("eventId");
     const commentId = searchParams.get("commentId");
