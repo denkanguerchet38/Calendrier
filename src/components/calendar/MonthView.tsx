@@ -85,7 +85,7 @@ export default function MonthView({
                 </span>
               </div>
 
-              <div className="space-y-0.5">
+              <div className="space-y-0.5" onClick={(e) => e.stopPropagation()}>
                 {dayEvents.slice(0, 3).map((event) => (
                   <EventCard
                     key={event.id}
